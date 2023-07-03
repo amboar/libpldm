@@ -292,6 +292,21 @@ uint32_t pldm_pdr_add_fru_record_set(pldm_pdr *repo, uint16_t terminus_handle,
 				     uint16_t container_id,
 				     uint32_t bmc_record_handle)
 {
+	int rc = pldm_pdr_add_fru_record_set_check(
+		repo, terminus_handle, fru_rsi, entity_type,
+		entity_instance_num, container_id, bmc_record_handle);
+	(void)rc;
+	assert(!rc);
+	return bmc_record_handle;
+}
+
+LIBPLDM_ABI_TESTING
+int pldm_pdr_add_fru_record_set_check(pldm_pdr *repo, uint16_t terminus_handle,
+				      uint16_t fru_rsi, uint16_t entity_type,
+				      uint16_t entity_instance_num,
+				      uint16_t container_id,
+				      uint32_t bmc_record_handle)
+{
 	uint32_t size = sizeof(struct pldm_pdr_hdr) +
 			sizeof(struct pldm_pdr_fru_record_set);
 	uint8_t data[size];
@@ -311,8 +326,8 @@ uint32_t pldm_pdr_add_fru_record_set(pldm_pdr *repo, uint16_t terminus_handle,
 	fru->entity_instance_num = htole16(entity_instance_num);
 	fru->container_id = htole16(container_id);
 
-	return pldm_pdr_add(repo, data, size, bmc_record_handle, false,
-			    terminus_handle);
+	return pldm_pdr_add_check(repo, data, size, false, terminus_handle,
+				  &bmc_record_handle);
 }
 
 LIBPLDM_ABI_STABLE
