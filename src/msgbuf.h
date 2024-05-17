@@ -54,7 +54,7 @@ extern "C" {
 
 struct pldm_msgbuf {
 	uint8_t *cursor;
-	ssize_t remaining;
+	intmax_t remaining;
 };
 
 /**
@@ -76,7 +76,7 @@ static inline int pldm_msgbuf_init(struct pldm_msgbuf *ctx, size_t minsize,
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
-	if ((minsize > len) || (len > SSIZE_MAX)) {
+	if ((minsize > len) || (len > INTMAX_MAX)) {
 		return PLDM_ERROR_INVALID_LENGTH;
 	}
 
@@ -85,7 +85,7 @@ static inline int pldm_msgbuf_init(struct pldm_msgbuf *ctx, size_t minsize,
 	}
 
 	ctx->cursor = (uint8_t *)buf;
-	ctx->remaining = (ssize_t)len;
+	ctx->remaining = (intmax_t)len;
 
 	return PLDM_SUCCESS;
 }
@@ -290,6 +290,10 @@ static inline int pldm__msgbuf_extract_uint8(struct pldm_msgbuf *ctx, void *dst)
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
+	if (ctx->remaining == INTMAX_MIN) {
+		assert(ctx->remaining < 0);
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
 	ctx->remaining -= sizeof(uint8_t);
 	assert(ctx->remaining >= 0);
 	if (ctx->remaining < 0) {
@@ -312,6 +316,10 @@ static inline int pldm__msgbuf_extract_int8(struct pldm_msgbuf *ctx, void *dst)
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
+	if (ctx->remaining == INTMAX_MIN) {
+		assert(ctx->remaining < 0);
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
 	ctx->remaining -= sizeof(int8_t);
 	assert(ctx->remaining >= 0);
 	if (ctx->remaining < 0) {
@@ -334,6 +342,13 @@ static inline int pldm__msgbuf_extract_uint16(struct pldm_msgbuf *ctx,
 
 	if (!ctx || !ctx->cursor || !dst) {
 		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	// Check for underflow while tracking the magnitude of the buffer overflow
+	static_assert(sizeof(ldst) < (size_t)INTMAX_MAX, "What");
+	if (ctx->remaining < INTMAX_MIN + (intmax_t)sizeof(ldst)) {
+		assert(ctx->remaining < 0);
+		return PLDM_ERROR_INVALID_LENGTH;
 	}
 
 	// Check for buffer overflow. If we overflow, account for the request as
@@ -376,6 +391,11 @@ static inline int pldm__msgbuf_extract_int16(struct pldm_msgbuf *ctx, void *dst)
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
+	static_assert(sizeof(ldst) < (size_t)INTMAX_MAX, "What");
+	if (ctx->remaining < INTMAX_MIN + (intmax_t)sizeof(ldst)) {
+		assert(ctx->remaining < 0);
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
 	ctx->remaining -= sizeof(ldst);
 	assert(ctx->remaining >= 0);
 	if (ctx->remaining < 0) {
@@ -404,6 +424,11 @@ static inline int pldm__msgbuf_extract_uint32(struct pldm_msgbuf *ctx,
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
+	static_assert(sizeof(ldst) < (size_t)INTMAX_MAX, "What");
+	if (ctx->remaining < INTMAX_MIN + (intmax_t)sizeof(ldst)) {
+		assert(ctx->remaining < 0);
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
 	ctx->remaining -= sizeof(ldst);
 	assert(ctx->remaining >= 0);
 	if (ctx->remaining < 0) {
@@ -431,6 +456,11 @@ static inline int pldm__msgbuf_extract_int32(struct pldm_msgbuf *ctx, void *dst)
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
+	static_assert(sizeof(ldst) < (size_t)INTMAX_MAX, "What");
+	if (ctx->remaining < INTMAX_MIN + (intmax_t)sizeof(ldst)) {
+		assert(ctx->remaining < 0);
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
 	ctx->remaining -= sizeof(ldst);
 	assert(ctx->remaining >= 0);
 	if (ctx->remaining < 0) {
@@ -462,6 +492,11 @@ static inline int pldm__msgbuf_extract_real32(struct pldm_msgbuf *ctx,
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
+	static_assert(sizeof(ldst) < (size_t)INTMAX_MAX, "What");
+	if (ctx->remaining < INTMAX_MIN + (intmax_t)sizeof(ldst)) {
+		assert(ctx->remaining < 0);
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
 	ctx->remaining -= sizeof(ldst);
 	assert(ctx->remaining >= 0);
 	if (ctx->remaining < 0) {
@@ -525,11 +560,14 @@ static inline int pldm_msgbuf_extract_array_uint8(struct pldm_msgbuf *ctx,
 		return PLDM_SUCCESS;
 	}
 
-	if (count >= SSIZE_MAX) {
+	if (count >= INTMAX_MAX) {
 		return PLDM_ERROR_INVALID_LENGTH;
 	}
 
-	ctx->remaining -= (ssize_t)count;
+	if (ctx->remaining < INTMAX_MIN + (intmax_t)count) {
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
+	ctx->remaining -= (intmax_t)count;
 	assert(ctx->remaining >= 0);
 	if (ctx->remaining < 0) {
 		return PLDM_ERROR_INVALID_LENGTH;
@@ -554,6 +592,11 @@ static inline int pldm_msgbuf_insert_uint32(struct pldm_msgbuf *ctx,
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
+	static_assert(sizeof(src) < (size_t)INTMAX_MAX, "What");
+	if (ctx->remaining < INTMAX_MIN + (intmax_t)sizeof(src)) {
+		assert(ctx->remaining < 0);
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
 	ctx->remaining -= sizeof(src);
 	assert(ctx->remaining >= 0);
 	if (ctx->remaining < 0) {
@@ -575,6 +618,11 @@ static inline int pldm_msgbuf_insert_uint16(struct pldm_msgbuf *ctx,
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
+	static_assert(sizeof(src) < (size_t)INTMAX_MAX, "What");
+	if (ctx->remaining < INTMAX_MIN + (intmax_t)sizeof(src)) {
+		assert(ctx->remaining < 0);
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
 	ctx->remaining -= sizeof(src);
 	assert(ctx->remaining >= 0);
 	if (ctx->remaining < 0) {
@@ -594,6 +642,11 @@ static inline int pldm_msgbuf_insert_uint8(struct pldm_msgbuf *ctx,
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
+	static_assert(sizeof(src) < (size_t)INTMAX_MAX, "What");
+	if (ctx->remaining < INTMAX_MIN + (intmax_t)sizeof(src)) {
+		assert(ctx->remaining < 0);
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
 	ctx->remaining -= sizeof(src);
 	assert(ctx->remaining >= 0);
 	if (ctx->remaining < 0) {
@@ -615,6 +668,11 @@ static inline int pldm_msgbuf_insert_int32(struct pldm_msgbuf *ctx,
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
+	static_assert(sizeof(src) < (size_t)INTMAX_MAX, "What");
+	if (ctx->remaining < INTMAX_MIN + (intmax_t)sizeof(src)) {
+		assert(ctx->remaining < 0);
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
 	ctx->remaining -= sizeof(src);
 	assert(ctx->remaining >= 0);
 	if (ctx->remaining < 0) {
@@ -636,6 +694,11 @@ static inline int pldm_msgbuf_insert_int16(struct pldm_msgbuf *ctx,
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
+	static_assert(sizeof(src) < (size_t)INTMAX_MAX, "What");
+	if (ctx->remaining < INTMAX_MIN + (intmax_t)sizeof(src)) {
+		assert(ctx->remaining < 0);
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
 	ctx->remaining -= sizeof(src);
 	assert(ctx->remaining >= 0);
 	if (ctx->remaining < 0) {
@@ -655,6 +718,11 @@ static inline int pldm_msgbuf_insert_int8(struct pldm_msgbuf *ctx,
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
+	static_assert(sizeof(src) < (size_t)INTMAX_MAX, "What");
+	if (ctx->remaining < INTMAX_MIN + (intmax_t)sizeof(src)) {
+		assert(ctx->remaining < 0);
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
 	ctx->remaining -= sizeof(src);
 	assert(ctx->remaining >= 0);
 	if (ctx->remaining < 0) {
@@ -688,11 +756,14 @@ static inline int pldm_msgbuf_insert_array_uint8(struct pldm_msgbuf *ctx,
 		return PLDM_SUCCESS;
 	}
 
-	if (count >= SSIZE_MAX) {
+	if (count >= INTMAX_MAX) {
 		return PLDM_ERROR_INVALID_LENGTH;
 	}
 
-	ctx->remaining -= (ssize_t)count;
+	if (ctx->remaining < INTMAX_MIN + (intmax_t)count) {
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
+	ctx->remaining -= (intmax_t)count;
 	assert(ctx->remaining >= 0);
 	if (ctx->remaining < 0) {
 		return PLDM_ERROR_INVALID_LENGTH;
@@ -715,10 +786,13 @@ static inline int pldm_msgbuf_span_required(struct pldm_msgbuf *ctx,
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
-	if (required > SSIZE_MAX) {
+	if (required > INTMAX_MAX) {
 		return PLDM_ERROR_INVALID_LENGTH;
 	}
 
+	if (ctx->remaining < INTMAX_MIN + (intmax_t)required) {
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
 	ctx->remaining -= (ssize_t)required;
 	assert(ctx->remaining >= 0);
 	if (ctx->remaining < 0) {
