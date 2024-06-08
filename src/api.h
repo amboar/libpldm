@@ -7,6 +7,18 @@
 #include <assert.h>
 #include <errno.h>
 
+#ifdef LIBPLDM_API_DEPRECATED
+#define LIBPLDM_ABI_DEPRECATED_ALIAS(fn) \
+	__asm__( \
+		".global " #fn "\r\n" \
+		".type " #fn ", STT_FUNC\r\n" \
+		".text\r\n" \
+		#fn ":" \
+	)
+#else
+#define LIBPLDM_ABI_DEPRECATED_ALIAS(fn)
+#endif
+
 /**
  * @brief Translate a negative errno value to a PLDM completion code
  *
